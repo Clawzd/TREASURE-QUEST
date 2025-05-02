@@ -208,17 +208,17 @@ public class TreasureQuest {
     }
 
     // Find shortest path from start to end
-    public static int findTreasure(int startRow, int startCol, int endRow, int endCol) {
+    public static int findTreasure(int S_Row, int S_Col, int E_Row, int E_Col) {
         Queue<Node> queue = new Queue<>();
-        queue.enqueue(new Node(startRow, startCol, 0));
-        visited[startRow][startCol] = true;
+        queue.enqueue(new Node(S_Row, S_Col, 0));
+        visited[S_Row][S_Col] = true;
 
         // Process each Node in the queue using BFS to explore all reachable paths
         while (!queue.isEmpty()) {
             Node current = queue.dequeue();
 
             // Goal reached
-            if (current.row == endRow && current.col == endCol) {
+            if (current.row == E_Row && current.col == E_Col) {
                 return current.steps;
             }
 
