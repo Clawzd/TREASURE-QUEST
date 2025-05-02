@@ -10,7 +10,7 @@ public class TreasureQuest {
         Scanner input = new Scanner(System.in);
 
 
-        System.out.println("#####################################################");
+        System.out.println("\n#####################################################");
         System.out.println("# _____ ____  _____    _    ____  _   _ ____  _____ #");
         System.out.println("#|_   _|  _ \\| ____|  / \\  / ___|| | | |  _ \\| ____|#");
         System.out.println("#  | | | |_) |  _|   / _ \\ \\___ \\| | | | |_) |  _|  #");
@@ -20,27 +20,20 @@ public class TreasureQuest {
         System.out.println("#| | | | | | |  _| \\___ \\ | |                       #");
         System.out.println("#| |_| | |_| | |___ ___) || |                       #");
         System.out.println("# \\__\\_\\\\___/|_____|____/ |_|                       #");
-        System.out.println("#####################################################");
+        System.out.println("#####################################################\n");
 
-
+        // For input dimensions
         System.out.println("#################################################");
         System.out.println("   Enter rows, columns, and number of monsters");
         System.out.println("#################################################");
-        try {
-            //Input dimensions
-            n = input.nextInt();
-            m = input.nextInt();
-            k = input.nextInt();
-            input.nextLine();
-        } catch (Exception e) {
-            // Validate initial input
-            System.out.println("Invalid input!: enter 3 integer numbers");
-            return;
-        }
+        n = input.nextInt();
+        m = input.nextInt();
+        k = input.nextInt();
+        input.nextLine();
 
         // Validate initial input
-        if (n <= 0 || m <= 0 || k < 0) {
-            System.out.println("Invalid input: inputs must be positive");
+        if (n < 5 || n > 1000 || m < 5 || m > 1000 || k < 0 || k > 10000) {
+            System.out.println("Invalid input range for n, m, or k.");
             return;
         }
 
@@ -49,14 +42,17 @@ public class TreasureQuest {
         monitored = new boolean[n][m];
         visited = new boolean[n][m];
 
-
-        // Initialize coordinates of Start (S) and End (E) to -1 as a marker for not found
+        // Track coordinates of Start (S) and End (E)
         int S_Row = -1;
         int S_Col = -1;
         int E_Row = -1;
         int E_Col = -1;
 
+        // Track how many times S and E appear
+        int sCount = 0;
+        int eCount = 0;
 
+        // Prompt user to enter map
         System.out.println("\n#################################################");
         System.out.println("               Enter the map");
         System.out.println("#################################################");
@@ -65,76 +61,112 @@ public class TreasureQuest {
         System.out.println("- 'S' for start, 'E' for end");
         System.out.println("- Map size: " + n + " rows × " + m + " columns");
 
-
         // Read map lines and locate S and E
         for (int i = 0; i < n; i++) {
             String line = input.nextLine();
+
+            // Validate line length
             if (line.length() != m) {
                 System.out.println("Error: Each line must have exactly " + m + " characters.");
                 return;
             }
+
             for (int j = 0; j < m; j++) {
-                map[i][j] = line.charAt(j);
-                if (map[i][j] == 'S') {
+                char ch = line.charAt(j);
+
+                // Validate allowed characters
+                if (ch != '.'&& ch != '\uF09F' && ch != '#' && ch != 'S' && ch != 'E') {
+                    System.out.println("Error: Invalid character '" + ch + "' found in the map.");
+                    return;
+                }
+
+                // Validate that borders are walls
+                if ((i == 0 || i == n - 1 || j == 0 || j == m - 1) && ch != '#') {
+                    System.out.println("Map border must be a wall (#)");
+                    return;
+                }
+
+                map[i][j] = ch;
+
+                // Count S and E occurrences
+                if (ch == 'S') {
                     S_Row = i;
                     S_Col = j;
+                    sCount++;
                 }
-                if (map[i][j] == 'E') {
+                if (ch == 'E') {
                     E_Row = i;
                     E_Col = j;
+                    eCount++;
                 }
             }
         }
-        // Ensure S and E were found
-        if (S_Row == -1 || S_Col == -1 || E_Row == -1 || E_Col == -1) {
-            System.out.println("Error: Start 'S' or End 'E' not found in map.");
+
+        // Reject if more than one 'S' or 'E' is found
+        if (sCount != 1 || eCount != 1) {
+            System.out.println("Error: Map must contain exactly one 'S' and one 'E'.");
             return;
         }
-        // Read monsters info
+
+        // Track monster locations to prevent duplicates
+        boolean[][] monsterPlaced = new boolean[n][m];
+
+        // Read monsters and apply their spread effect
         for (int i = 0; i < k; i++) {
             System.out.println((i + 1) + " - Enter monster position and range:");
             int r = input.nextInt() - 1;
             int c = input.nextInt() - 1;
             int d = input.nextInt();
 
-            // Validate monster input
-            if (r < 0 || r >= n || c < 0 || c >= m) {
-                System.out.println("Error: Monster position out of map.");
+            // Check if the monster is placed on the border
+            if (r <= 0 || r >= n - 1 || c <= 0 || c >= m - 1) {
+                System.out.println("Error: Monster must be placed inside the map");
                 return;
             }
-            // Validate monster input
+            // Check if the monster is placed on a wall
             if (map[r][c] == '#') {
                 System.out.println("Error: Monster cannot be placed on a wall.");
                 return;
             }
-            // Run spreadMonster to danger zones
+            // Check the monster's range
+            if (d < 0 || d > n * m) {
+                System.out.println("Error: Invalid monster range.");
+                return;
+            }
+            // Check if there's already a monster at the same location
+            if (monsterPlaced[r][c]) {
+                System.out.println("Error: Two monsters cannot be placed at the same location.");
+                return;
+            }
+
+            monsterPlaced[r][c] = true;
+
             markDangerZones(r, c, d);
         }
+
         // If S or E are in danger zones, it's impossible
         if (monitored[S_Row][S_Col] || monitored[E_Row][E_Col]) {
             System.out.println("IMPOSSIBLE");
             return;
         }
-        // Run findTreasur to find shortest path
+
+        // Run BFS to find shortest path
         int answer = findTreasure(S_Row, S_Col, E_Row, E_Col);
 
         // Output result
         if (answer == -1) {
             System.out.println("IMPOSSIBLE");
         } else {
-            System.out.println("##########");
-            System.out.println("Success");
-            System.out.println("##########");
-            System.out.println("##  " + answer + "  ##");
-            System.out.println("##########");
+            System.out.println(answer);
         }
     }
+
     // Expand monster's range in 4 straight directions
     public static void markDangerZones(int originalRow, int originalCol, int d) {
         // Create a queue
         Queue<Node> queue = new Queue<>();
         // Enqueue the starting position of the monster with 0 steps
-        queue.enqueue(new Node( originalRow, originalCol, 0));
+        queue.enqueue(new Node(originalRow, originalCol, 0));
         // Mark the monster's initial position as monitored
         monitored[originalRow][originalCol] = true;
 
@@ -142,7 +174,6 @@ public class TreasureQuest {
         while (!queue.isEmpty()) {
             Node current = queue.dequeue();
 
-            // Continue spreading only if the monster hasn't reached its maximum range
             if (current.steps < d) {
                 // Move Up
                 if ((current.col == originalCol && originalRow - (current.row - 1) <= d) && current.row - 1 >= 0 && map[current.row - 1][current.col] != '#' && !monitored[current.row - 1][current.col]) {
@@ -175,18 +206,19 @@ public class TreasureQuest {
             }
         }
     }
+
     // Find shortest path from start to end
-    public static int findTreasure(int S_Row, int S_Col, int E_Row, int E_Col) {
+    public static int findTreasure(int startRow, int startCol, int endRow, int endCol) {
         Queue<Node> queue = new Queue<>();
-        queue.enqueue(new Node(S_Row, S_Col, 0));
-        visited[S_Row][S_Col] = true;
+        queue.enqueue(new Node(startRow, startCol, 0));
+        visited[startRow][startCol] = true;
 
         // Process each Node in the queue using BFS to explore all reachable paths
         while (!queue.isEmpty()) {
             Node current = queue.dequeue();
 
             // Goal reached
-            if (current.row == E_Row && current.col == E_Col) {
+            if (current.row == endRow && current.col == endCol) {
                 return current.steps;
             }
 
@@ -219,6 +251,7 @@ public class TreasureQuest {
                 queue.enqueue(new Node(current.row, current.col + 1, current.steps + 1));
             }
         }
+
         // No path found
         return -1;
     }
